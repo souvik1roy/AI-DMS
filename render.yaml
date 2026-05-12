@@ -8,23 +8,36 @@ services:
     # than one instance would let a cancel request hit the wrong worker, so
     # pin to one instance until a queue is introduced.
     numInstances: 1
-    rootDir: sidecar
-    dockerfilePath: Dockerfile
+
+    # Build context is the repo root so the multi-stage Dockerfile can COPY
+    # both `ui/` (for the Vite build) and `sidecar/` (for the Python service).
+    dockerfilePath: ./sidecar/Dockerfile
+    dockerContext: .
+
     healthCheckPath: /health
     autoDeploy: true
+
     envVars:
       # ---- baked-in defaults --------------------------------------------
       - key: DMS_WEB_MODE
         value: "1"
       - key: PORT
         value: "8080"
+      # Path where the multi-stage Docker build drops the React dist; the
+      # server.py UI mount reads from here. Override only if you change the
+      # Dockerfile copy target.
+      - key: DMS_UI_DIST
+        value: /app/dist
 
       # ---- required secrets (set in Render → Environment) ---------------
-      # Long random string; the UI bakes the SAME value into VITE_DMS_TOKEN.
-      # Rotating this requires re-deploying the UI with the new value.
+      # Long random string. Now serves a dual purpose: gates every API call
+      # AND is the value FastAPI injects into the served index.html so the
+      # UI can authenticate itself on page load. Rotate by editing this
+      # variable in Render — the service restarts and the new value flows
+      # to the UI on next page load.
       - key: DMS_BEARER_TOKEN
         sync: false
-      # OpenAI API key (used for gpt-4o vision + transcription).
+      # OpenAI API key (gpt-4o vision + transcription).
       - key: OPENAI_API_KEY
         sync: false
       # Supabase project URL, e.g. https://<ref>.supabase.co
@@ -37,35 +50,28 @@ services:
       # the direct connection — direct hits the connection limit fast.
       - key: DATABASE_URL
         sync: false
-      # Comma-separated list of UI origins permitted by CORS, e.g.
-      # https://ai-dms.vercel.app,https://ai-dms-staging.vercel.app
-      - key: WEB_ORIGIN
-        sync: false
 
-      # ---- optional overrides (defaults shown; set in Render to change) -
+      # ---- optional ------------------------------------------------------
+      # WEB_ORIGIN is only needed if another origin (not the bundled UI)
+      # will call the API. With same-origin UI it can stay unset.
+      # - key: WEB_ORIGIN
+      #   sync: false
+
+      # ---- optional model / bucket overrides (defaults shown) -----------
       # - key: OPENAI_VISION_MODEL      # default gpt-4o
-      #   sync: false
       # - key: OPENAI_REASONER_MODEL    # default gpt-4o
-      #   sync: false
       # - key: OPENAI_TEXT_MODEL        # default gpt-4o
-      #   sync: false
       # - key: OPENAI_STT_MODEL         # default gpt-4o-transcribe
-      #   sync: false
       # - key: DMS_STAGING_BUCKET       # default 'staging'
-      #   sync: false
       # - key: DMS_ORGANIZED_BUCKET     # default 'organized'
-      #   sync: false
-      # - key: DMS_SIGNED_URL_TTL       # default 3600 (seconds)
-      #   sync: false
+      # - key: DMS_SIGNED_URL_TTL       # default 3600
       # - key: DMS_AUDIO_TRIM_SECONDS   # default 60
-      #   sync: false
-      # - key: DMS_LIBREOFFICE_TIMEOUT  # default 120 (seconds)
-      #   sync: false
+      # - key: DMS_LIBREOFFICE_TIMEOUT  # default 120
 
     # Optional persistent disk for job/sidecar logs. /tmp is ephemeral on
-    # Render so `/logs/recent` and `/jobs/{id}/log` lose history at every
+    # Render so /logs/recent and /jobs/{id}/log lose history at every
     # restart without a disk. Uncomment + set DMS_TMP_DIR=/var/dms in
-    # envVars to enable. Smallest size (1 GB) is fine — logs are JSONL.
+    # envVars to enable.
     # disk:
     #   name: dms-logs
     #   mountPath: /var/dms

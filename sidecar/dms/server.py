@@ -5,6 +5,7 @@ import json as _json
 import logging
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import ulid
@@ -19,6 +20,8 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from dms.config import (
@@ -415,6 +418,57 @@ def create_app(token: str) -> FastAPI:
         if global_default:
             return {"destination": global_default}
         return {"destination": default_destination_for_job(job_id_hint)}
+
+    # ---------- static UI (same-origin React bundle) ----------
+    # When the multi-stage Docker build copies the Vite output to /app/dist,
+    # we serve it from the same FastAPI app — kills the CORS class of bugs
+    # and means one Render service, one URL, one deploy.
+    ui_dist = Path(os.environ.get("DMS_UI_DIST", "/app/dist"))
+    if ui_dist.is_dir() and (ui_dist / "index.html").is_file():
+        _index_html_template = (ui_dist / "index.html").read_text(encoding="utf-8")
+        _bootstrap_cfg = _json.dumps({"baseUrl": "", "token": token})
+        # The UI's getEndpoint() already reads window.__DMS_DEV__ as a
+        # fallback when import.meta.env.VITE_DMS_BASE_URL is unset — we
+        # reuse that channel to hand the bearer token over at page load.
+        _bootstrap_script = (
+            f"<script>window.__DMS_DEV__={_bootstrap_cfg};</script>"
+        )
+        # Inject before the Vite bundle so the global is set before the
+        # module evaluates. Falls back to closing </head> if Vite's output
+        # ever changes shape.
+        if '<script type="module"' in _index_html_template:
+            _index_html = _index_html_template.replace(
+                '<script type="module"',
+                f'{_bootstrap_script}<script type="module"',
+                1,
+            )
+        else:
+            _index_html = _index_html_template.replace(
+                "</head>", f"{_bootstrap_script}</head>", 1
+            )
+
+        if (ui_dist / "assets").is_dir():
+            app.mount(
+                "/assets",
+                StaticFiles(directory=ui_dist / "assets"),
+                name="assets",
+            )
+
+        @app.get("/", include_in_schema=False)
+        async def _serve_root() -> HTMLResponse:
+            return HTMLResponse(_index_html, headers={"Cache-Control": "no-cache"})
+
+        # Catch-all for SPA client-side routing. Registered last so it
+        # never shadows the API routes above.
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def _spa_fallback(full_path: str) -> Any:
+            # If it's a real file in dist/ (favicon.ico, robots.txt, etc.),
+            # serve it directly.
+            candidate = ui_dist / full_path
+            if candidate.is_file() and ui_dist in candidate.resolve().parents:
+                return FileResponse(candidate)
+            # Otherwise hand the SPA back — React Router handles the path.
+            return HTMLResponse(_index_html, headers={"Cache-Control": "no-cache"})
 
     # ---------- lifecycle hooks ----------
 

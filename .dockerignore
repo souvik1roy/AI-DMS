@@ -1,0 +1,65 @@
+# Keep the Docker build context lean (now the whole repo, not just sidecar/).
+.git/
+.github/
+.idea/
+.vscode/
+.claude/
+.smoke/
+.vercel/
+
+# Node / UI build artefacts (the UI stage runs pnpm install + build itself)
+node_modules/
+ui/node_modules/
+ui/dist/
+ui/.vite/
+ui/.vercel/
+ui/public/_dms_dev_handshake.json
+ui/vite.config.d.ts
+ui/vite.config.js
+**/*.tsbuildinfo
+
+# Python build / cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.egg-info/
+**/.venv/
+**/venv/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+sidecar/build/
+sidecar/dist/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Legacy desktop / engine artefacts that are gitignored but may exist locally
+src-tauri/
+engine/
+vendor/
+software/
+bfsi_software/
+engine-recipe.json
+
+# Env files — never bake secrets into images
+.env
+.env.local
+sidecar/.env
+ui/.env
+ui/.env.local
+
+# Tests / dev-only scripts
+scripts/smoke*.py
+scripts/dev*.sh
+scripts/build*.sh
+scripts/migrate*.py
+scripts/seed*.py
+scripts/install*.py
+scripts/install*.sh
+scripts/fetch*.sh
+scripts/ci_*.py
+scripts/check-*.sh
+
+*.log
