@@ -2,7 +2,11 @@
 node_modules/
 ui/dist/
 ui/.vite/
+ui/.vercel/
 ui/public/_dms_dev_handshake.json
+ui/vite.config.js
+ui/vite.config.d.ts
+*.tsbuildinfo
 *.log
 .env
 .env.local

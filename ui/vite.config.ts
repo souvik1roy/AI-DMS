@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Vite serves the UI; Tauri opens this URL in dev and loads the bundled `dist/` in prod.
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,

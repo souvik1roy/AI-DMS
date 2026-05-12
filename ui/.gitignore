@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.vite/
+public/_dms_dev_handshake.json
+.env
+.env.local
+*.log
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+.vercel/
