@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /tmp/AI-DMS-souvik1roy config user.name)",
+      "Bash(git -C /tmp/AI-DMS-souvik1roy config user.email)",
+      "Bash(set -e)",
+      "Bash(cp __TRACKED_VAR__/.gitignore __TRACKED_VAR__/.gitignore)",
+      "Bash(cp __TRACKED_VAR__/render.yaml __TRACKED_VAR__/render.yaml)",
+      "Bash(cp __TRACKED_VAR__/sidecar/Dockerfile __TRACKED_VAR__/sidecar/Dockerfile)",
+      "Bash(cp __TRACKED_VAR__/sidecar/dms/__main__.py __TRACKED_VAR__/sidecar/dms/__main__.py)",
+      "Bash(git -C /tmp/AI-DMS-souvik1roy status --short)",
+      "Bash(git -C /tmp/AI-DMS-souvik1roy diff --stat)"
+    ]
+  }
+}

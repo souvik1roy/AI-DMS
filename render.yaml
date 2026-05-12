@@ -3,33 +3,70 @@ services:
     name: ai-dms-sidecar
     runtime: docker
     plan: starter
+    region: oregon
+    # The orchestrator holds in-memory cancel tokens per process. Running more
+    # than one instance would let a cancel request hit the wrong worker, so
+    # pin to one instance until a queue is introduced.
+    numInstances: 1
     rootDir: sidecar
     dockerfilePath: Dockerfile
     healthCheckPath: /health
     autoDeploy: true
     envVars:
+      # ---- baked-in defaults --------------------------------------------
       - key: DMS_WEB_MODE
         value: "1"
       - key: PORT
         value: "8080"
-      # The rest are filled in via the Render dashboard (kept out of source control):
-      #   DMS_BEARER_TOKEN          long random string the UI uses
-      #   OPENAI_API_KEY            OpenAI API key (gpt-4o for vision + reasoner)
-      #   OPENAI_VISION_MODEL       defaults to gpt-4o, override if needed
-      #   OPENAI_REASONER_MODEL     defaults to gpt-4o
-      #   SUPABASE_URL              https://<project>.supabase.co
-      #   SUPABASE_SERVICE_ROLE_KEY service role key from Supabase project settings
-      #   DATABASE_URL              postgres URI from Supabase (use the pooled URI for app)
-      #   WEB_ORIGIN                comma-separated allowed origins for CORS
+
+      # ---- required secrets (set in Render → Environment) ---------------
+      # Long random string; the UI bakes the SAME value into VITE_DMS_TOKEN.
+      # Rotating this requires re-deploying the UI with the new value.
       - key: DMS_BEARER_TOKEN
         sync: false
+      # OpenAI API key (used for gpt-4o vision + transcription).
       - key: OPENAI_API_KEY
         sync: false
+      # Supabase project URL, e.g. https://<ref>.supabase.co
       - key: SUPABASE_URL
         sync: false
+      # Supabase service-role key (NOT the anon key).
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      # Postgres URI from Supabase. Use the **pooler** (port 6543) URI, not
+      # the direct connection — direct hits the connection limit fast.
       - key: DATABASE_URL
         sync: false
+      # Comma-separated list of UI origins permitted by CORS, e.g.
+      # https://ai-dms.vercel.app,https://ai-dms-staging.vercel.app
       - key: WEB_ORIGIN
         sync: false
+
+      # ---- optional overrides (defaults shown; set in Render to change) -
+      # - key: OPENAI_VISION_MODEL      # default gpt-4o
+      #   sync: false
+      # - key: OPENAI_REASONER_MODEL    # default gpt-4o
+      #   sync: false
+      # - key: OPENAI_TEXT_MODEL        # default gpt-4o
+      #   sync: false
+      # - key: OPENAI_STT_MODEL         # default gpt-4o-transcribe
+      #   sync: false
+      # - key: DMS_STAGING_BUCKET       # default 'staging'
+      #   sync: false
+      # - key: DMS_ORGANIZED_BUCKET     # default 'organized'
+      #   sync: false
+      # - key: DMS_SIGNED_URL_TTL       # default 3600 (seconds)
+      #   sync: false
+      # - key: DMS_AUDIO_TRIM_SECONDS   # default 60
+      #   sync: false
+      # - key: DMS_LIBREOFFICE_TIMEOUT  # default 120 (seconds)
+      #   sync: false
+
+    # Optional persistent disk for job/sidecar logs. /tmp is ephemeral on
+    # Render so `/logs/recent` and `/jobs/{id}/log` lose history at every
+    # restart without a disk. Uncomment + set DMS_TMP_DIR=/var/dms in
+    # envVars to enable. Smallest size (1 GB) is fine — logs are JSONL.
+    # disk:
+    #   name: dms-logs
+    #   mountPath: /var/dms
+    #   sizeGB: 1

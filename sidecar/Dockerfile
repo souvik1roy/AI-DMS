@@ -23,7 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install dependencies first (cached across code changes).
+# Install dependencies first (cached across code changes). The placeholder
+# package satisfies `pip install -e .` so that subsequent COPY of the real
+# source is picked up at import time without re-resolving deps.
 COPY pyproject.toml /app/pyproject.toml
 RUN mkdir -p /app/dms && touch /app/dms/__init__.py \
     && pip install --no-cache-dir -e .
@@ -31,8 +33,15 @@ RUN mkdir -p /app/dms && touch /app/dms/__init__.py \
 # Copy the actual package contents.
 COPY dms /app/dms
 
+# Drop root for runtime. Build steps above stay as root; the appuser owns /app
+# so editable-install rewrites and tmp dirs work.
+RUN useradd --create-home --uid 10001 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8080
 
-# `--host 0.0.0.0` for Render; `--no-handshake` skips the stdout handshake JSON.
-# The bearer token is read from $DMS_BEARER_TOKEN (must be set in the environment).
-CMD ["python", "-m", "dms", "--host", "0.0.0.0", "--port", "8080", "--no-handshake"]
+# Use shell form so $PORT (injected by Render, or set in render.yaml) expands.
+# --no-handshake skips the stdout handshake JSON — DMS_WEB_MODE already implies
+# this, but pass it explicitly to make the intent obvious.
+CMD ["sh", "-c", "exec python -m dms --host 0.0.0.0 --port ${PORT:-8080} --no-handshake"]

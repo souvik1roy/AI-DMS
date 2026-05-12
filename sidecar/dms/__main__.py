@@ -41,6 +41,15 @@ def main() -> None:
     args = parser.parse_args()
 
     if not args.token:
+        # In web/container mode a random per-restart token would silently
+        # break the UI (every redeploy would invalidate the bearer baked
+        # into the Vercel build). Fail fast instead.
+        if args.no_handshake or os.environ.get("DMS_WEB_MODE"):
+            sys.stderr.write(
+                "FATAL: DMS_BEARER_TOKEN env var is required in web mode "
+                "(set it in Render → Environment).\n"
+            )
+            sys.exit(1)
         args.token = secrets.token_urlsafe(32)
 
     # If port = 0, bind a free port up-front so we can announce it before uvicorn starts.
