@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: ai-dms-sidecar
+    runtime: docker
+    plan: starter
+    rootDir: sidecar
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DMS_WEB_MODE
+        value: "1"
+      - key: PORT
+        value: "8080"
+      # The rest are filled in via the Render dashboard (kept out of source control):
+      #   DMS_BEARER_TOKEN          long random string the UI uses
+      #   OPENAI_API_KEY            OpenAI API key (gpt-4o for vision + reasoner)
+      #   OPENAI_VISION_MODEL       defaults to gpt-4o, override if needed
+      #   OPENAI_REASONER_MODEL     defaults to gpt-4o
+      #   SUPABASE_URL              https://<project>.supabase.co
+      #   SUPABASE_SERVICE_ROLE_KEY service role key from Supabase project settings
+      #   DATABASE_URL              postgres URI from Supabase (use the pooled URI for app)
+      #   WEB_ORIGIN                comma-separated allowed origins for CORS
+      - key: DMS_BEARER_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false

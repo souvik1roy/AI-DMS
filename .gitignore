@@ -1,0 +1,42 @@
+# Node / UI
+node_modules/
+ui/dist/
+ui/.vite/
+ui/public/_dms_dev_handshake.json
+*.log
+.env
+.env.local
+sidecar/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+sidecar/build/
+sidecar/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+!.vscode/settings.json.example
+
+# Smoke-test runtime state
+.smoke/
+
+# Legacy desktop / engine artefacts (kept on disk locally, never pushed)
+src-tauri/
+engine/
+vendor/
+engine-recipe.json
+software/
+bfsi_software/
